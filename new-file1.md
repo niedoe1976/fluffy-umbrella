@@ -1,1 +1,1 @@
-Test text - awesome and very good
+Test text - awesome

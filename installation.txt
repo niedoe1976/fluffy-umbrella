@@ -1,0 +1,3 @@
+How to install:
+- setup server
+- install Windows 10

@@ -1,3 +1,1 @@
-Do this and do that
-
-A different new line
+This has now been done properly

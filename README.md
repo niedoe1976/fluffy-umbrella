@@ -33,7 +33,7 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 	* `"FromLogContext"`
 
 
-	  "Serilog": {
+	"Serilog": {
 		"Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
 		"MinimumLevel": "Debug",
 		"WriteTo": [

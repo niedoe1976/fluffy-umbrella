@@ -27,53 +27,53 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 ## appsettings.json
 
-  "Serilog": {
-    "Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
-    "MinimumLevel": "Debug",
-    "WriteTo": [
-      {
-        "Name": "ApplicationInsights",
-        "Args": {
-          "InstrumentationKey": "e92c41b8-5d20-439a-9c62-e8835bff2096",
-          "telemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
-        }
-      },
-      {
-        "Name": "File",
-        "Args": {
-          "path": "Logs/log.txt",
-          "restrictedToMinimumLevel": "Information",
-          "outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
-        }
-      }
-    ],
-    "Filter": [
-      {
-        "Name": "ByExcluding",
-        "Args": {
-          "expression": "@l = 'Information' and Contains(@mt, 'filtered')"
-        }
-      }
-    ],
-    "Enrich": [ "FromLogContext", "WithMachineName", "WithEnvironmentName", "WithEnvironmentUserName", "WithAssemblyName", "WithAssemblyVersion", "WithThreadId", "WithCorrelationId", "WithCorrelationIdHeader" ],
-    "Destructure": [
-      {
-        "Name": "ToMaximumDepth",
-        "Args": { "maximumDestructuringDepth": 4 }
-      },
-      {
-        "Name": "ToMaximumStringLength",
-        "Args": { "maximumStringLength": 100 }
-      },
-      {
-        "Name": "ToMaximumCollectionCount",
-        "Args": { "maximumCollectionCount": 10 }
-      }
-    ],
-    "Properties": {
-      "Application": "WebAPIForLogWrapperTest"
-    }
-  },
+	  "Serilog": {
+		"Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
+		"MinimumLevel": "Debug",
+		"WriteTo": [
+		  {
+			"Name": "ApplicationInsights",
+			"Args": {
+			  "InstrumentationKey": "e92c41b8-5d20-439a-9c62-e8835bff2096",
+			  "telemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
+			}
+		  },
+		  {
+			"Name": "File",
+			"Args": {
+			  "path": "Logs/log.txt",
+			  "restrictedToMinimumLevel": "Information",
+			  "outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
+			}
+		  }
+		],
+		"Filter": [
+		  {
+			"Name": "ByExcluding",
+			"Args": {
+			  "expression": "@l = 'Information' and Contains(@mt, 'filtered')"
+			}
+		  }
+		],
+		"Enrich": [ "FromLogContext", "WithMachineName", "WithEnvironmentName", "WithEnvironmentUserName", "WithAssemblyName", "WithAssemblyVersion", "WithThreadId", "WithCorrelationId", "WithCorrelationIdHeader" ],
+		"Destructure": [
+		  {
+			"Name": "ToMaximumDepth",
+			"Args": { "maximumDestructuringDepth": 4 }
+		  },
+		  {
+			"Name": "ToMaximumStringLength",
+			"Args": { "maximumStringLength": 100 }
+		  },
+		  {
+			"Name": "ToMaximumCollectionCount",
+			"Args": { "maximumCollectionCount": 10 }
+		  }
+		],
+		"Properties": {
+		  "Application": "WebAPIForLogWrapperTest"
+		}
+	  },
 
 
 ## Startup.cs

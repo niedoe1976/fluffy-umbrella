@@ -16,7 +16,7 @@ In this course, you will ean how to use GitHub successfully.
 # All of the below is test!
 
 # Introduktion
-Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, 
+Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til logning i NTI FM 2.0.
 
 # Getting Started
 TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:

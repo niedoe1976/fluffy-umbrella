@@ -19,7 +19,7 @@ In this course, you will ean how to use GitHub successfully.
 
 Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til logning i NTI FM 2.0.
 
-`FMSerilogTelemetry<T>` er en implementation af interfacet, der benytter Serilog biblioteket <https://serilog.net/>. Serilog understøtter struktureret logning, hvilket for eksempel gør søgning og filtrering nemmere på Application Insights. Den kan sættes op til at logge til et eller flere "Sinks" - se afsnittet om opsætning i appsettings.json nedenfor.
+`FMSerilogTelemetry<T>` er en implementation af interfacet, der benytter Serilog biblioteket - <https://serilog.net/>. Serilog understøtter struktureret logning, hvilket for eksempel gør søgning og filtrering nemmere på Application Insights. Den kan sættes op til at logge til et eller flere "Sinks" - se afsnittet om opsætning i appsettings.json nedenfor.
 
 # Opsætning
 

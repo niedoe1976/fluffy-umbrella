@@ -28,12 +28,12 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 ## appsettings.json
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
-* `"Using"` Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
-* `"Enrich"` Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
-	* `"FromLogContext"` Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
-	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"` Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
-	* `"With..."` De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
-* `"Destructure"` angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
+* `"Using"`: Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
+* `"Enrich"`: Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
+	* `"FromLogContext"`: Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
+	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"`: Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
+	* `"With..."`: De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
+* `"Destructure"`: Angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
 
 
 	  "Serilog": {
@@ -87,6 +87,24 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 
 ## Startup.cs
 
+### `ConfigureServices`
+
+Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API. Linjerne skal indsættes i `ConfigureServices` metoden.
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+		
+			...
+		
+			services.AddApplicationInsightsTelemetry(Configuration);
+
+			services.AddSingleton(typeof(IFMTelemetry<>), typeof(FMSerilogTelemetry<>));
+
+			// To make logging able to read/write correlation ids from/to the http request/response headers
+			services.AddHttpContextAccessor();
+        }
+
+
 ## Dependency injection
 
 Den konkrete instans af log wrapperen kan genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
@@ -102,69 +120,69 @@ I de følgende log eksempler er `_telemetryLogger` en instans af `IFMTelemetry<T
 
 ## Eksempler på logning i forskellige levels
 
-                _telemetryLogger.LogDebug("Get() LogDebug called at {Now}", DateTime.Now.ToShortTimeString());
-                _telemetryLogger.LogInformation("Get() LogInformation called at {Now}", DateTime.Now.ToShortTimeString());
-                _telemetryLogger.LogWarning("Get() LogWarning called at {Now}", DateTime.Now.ToShortTimeString());
-                _telemetryLogger.LogError("Get() LogError called at {Now}", DateTime.Now.ToShortTimeString());
-                _telemetryLogger.LogCritical("Get() LogCritical called at {Now}", DateTime.Now.ToShortTimeString());
+		_telemetryLogger.LogDebug("Get() LogDebug called at {Now}", DateTime.Now.ToShortTimeString());
+		_telemetryLogger.LogInformation("Get() LogInformation called at {Now}", DateTime.Now.ToShortTimeString());
+		_telemetryLogger.LogWarning("Get() LogWarning called at {Now}", DateTime.Now.ToShortTimeString());
+		_telemetryLogger.LogError("Get() LogError called at {Now}", DateTime.Now.ToShortTimeString());
+		_telemetryLogger.LogCritical("Get() LogCritical called at {Now}", DateTime.Now.ToShortTimeString());
 
 ## Eksempel på logning af et objekt med en ikke-triviel struktur
 
-                var climateChanges = new
-                {
-                    TemperatureRise = 1.7,
-                    Year = 2076,
-                    Cause = "Coffee Outage 2 - long lasting emission 0.........1.........2.........3.........4.........5.........6.........7.........8.........9.........!",
-                    WeatherTypes = new[]
-                    {
-                        "Sleet", "Hail", "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-                    },
-                    DeepOcean = new
-                    {
-                        Name = "Vadehavet",
-                        DeeperOcean = new
-                        {
-                            Name = "Middelhavet",
-                            EvenDeeperOcean = new
-                            {
-                                Name = "Atlanterhavet",
-                                EvenABitDeeperOcean = new
-                                {
-                                    Name = "Stillehavet",
-                                    DeepestPlace = new { Name = "Marianergraven" }
-                                }
-                            }
-                        }
-                    }
-                };
-                _telemetryLogger.Log(FMLogLevel.Error, "Unhandled climate changes {@ClimateChanges}", climateChanges);
+		var climateChanges = new
+		{
+			TemperatureRise = 1.7,
+			Year = 2076,
+			Cause = "Coffee Outage 2 - long lasting emission 0.........1.........2.........3.........4.........5.........6.........7.........8.........9.........!",
+			WeatherTypes = new[]
+			{
+				"Sleet", "Hail", "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+			},
+			DeepOcean = new
+			{
+				Name = "Vadehavet",
+				DeeperOcean = new
+				{
+					Name = "Middelhavet",
+					EvenDeeperOcean = new
+					{
+						Name = "Atlanterhavet",
+						EvenABitDeeperOcean = new
+						{
+							Name = "Stillehavet",
+							DeepestPlace = new { Name = "Marianergraven" }
+						}
+					}
+				}
+			}
+		};
+		_telemetryLogger.Log(FMLogLevel.Error, "Unhandled climate changes {@ClimateChanges}", climateChanges);
 
 ## Eksempel på logning af en Exception
 
-                try
-                {
-                    throw new Exception("TestLogException");
-                }
-                catch (Exception e)
-                {
-                    _telemetryLogger.LogError(e, "Caught an exception");
-                }
+		try
+		{
+			throw new Exception("TestLogException");
+		}
+		catch (Exception e)
+		{
+			_telemetryLogger.LogError(e, "Caught an exception");
+		}
 
 ## Eksempel på påtrykning af en property
 
-                using (_telemetryLogger.PushProperty("BuildingId", "17"))
-                {
-                    _telemetryLogger.LogWarning("Component type unknown");
-                }
+		using (_telemetryLogger.PushProperty("BuildingId", "17"))
+		{
+			_telemetryLogger.LogWarning("Component type unknown");
+		}
 
 Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle indeholde property'en "BuildingId"/"17".
 
 ## Eksempel på påtrykning af et lokalt correlation id
 
-                using (_telemetryLogger.GetCorrelationIdObject())
-                {
-                    _telemetryLogger.LogInformation("Testing correlationId as GetCorrelationIdObject");
-                    new LogWrapperTesting().SomeTestMethod01();
-                }
+		using (_telemetryLogger.GetCorrelationIdObject())
+		{
+			_telemetryLogger.LogInformation("Testing correlationId as GetCorrelationIdObject");
+			new LogWrapperTesting().SomeTestMethod01();
+		}
 
-Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle indeholde property'en "BuildingId"/"17".
+Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle blive påtrykt et lokalt correlation id, der *ikke* overskriver correlation id fra Serilog enricheren - de ligger i forskellige properties.

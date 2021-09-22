@@ -27,7 +27,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 ## appsettings.json
 
-`"Serilog": {
+  "Serilog": {
     "Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
     "MinimumLevel": "Debug",
     "WriteTo": [
@@ -73,7 +73,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
     "Properties": {
       "Application": "WebAPIForLogWrapperTest"
     }
-  },`
+  },
 
 
 ## Startup.cs

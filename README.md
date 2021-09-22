@@ -29,7 +29,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 * `"Using"` Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
-* ´"Enrich"´ angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
+* `"Enrich"` angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
 	* `"FromLogContext"`
 * `"Destructure"` angiver ...
 

@@ -29,9 +29,11 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 * `"Using"` Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
-* `"Enrich"` angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
-	* `"FromLogContext"`
-* `"Destructure"` angiver ...
+* `"Enrich"` Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
+	* `"FromLogContext"` Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
+	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"` Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
+	* `"With..."` De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
+* `"Destructure"` angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
 
 
 	  "Serilog": {
@@ -85,24 +87,84 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 
 ## Startup.cs
 
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+## Dependency injection
+
+Den konkrete instans af log wrapperen kan genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
+
+        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger)
+        {
+            _telemetryLogger = telemetryLogger;
+        }
 
 # Logning i praksis
 
+I de følgende log eksempler er `_telemetryLogger` en instans af `IFMTelemetry<T>` (se ovenfor om Startup.cs og Dependency injection).
 
+## Eksempler på logning i forskellige levels
 
+                _telemetryLogger.LogDebug("Get() LogDebug called at {Now}", DateTime.Now.ToShortTimeString());
+                _telemetryLogger.LogInformation("Get() LogInformation called at {Now}", DateTime.Now.ToShortTimeString());
+                _telemetryLogger.LogWarning("Get() LogWarning called at {Now}", DateTime.Now.ToShortTimeString());
+                _telemetryLogger.LogError("Get() LogError called at {Now}", DateTime.Now.ToShortTimeString());
+                _telemetryLogger.LogCritical("Get() LogCritical called at {Now}", DateTime.Now.ToShortTimeString());
 
+## Eksempel på logning af et objekt med en ikke-triviel struktur
 
+                var climateChanges = new
+                {
+                    TemperatureRise = 1.7,
+                    Year = 2076,
+                    Cause = "Coffee Outage 2 - long lasting emission 0.........1.........2.........3.........4.........5.........6.........7.........8.........9.........!",
+                    WeatherTypes = new[]
+                    {
+                        "Sleet", "Hail", "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+                    },
+                    DeepOcean = new
+                    {
+                        Name = "Vadehavet",
+                        DeeperOcean = new
+                        {
+                            Name = "Middelhavet",
+                            EvenDeeperOcean = new
+                            {
+                                Name = "Atlanterhavet",
+                                EvenABitDeeperOcean = new
+                                {
+                                    Name = "Stillehavet",
+                                    DeepestPlace = new { Name = "Marianergraven" }
+                                }
+                            }
+                        }
+                    }
+                };
+                _telemetryLogger.Log(FMLogLevel.Error, "Unhandled climate changes {@ClimateChanges}", climateChanges);
 
+## Eksempel på logning af en Exception
 
+                try
+                {
+                    throw new Exception("TestLogException");
+                }
+                catch (Exception e)
+                {
+                    _telemetryLogger.LogError(e, "Caught an exception");
+                }
 
-TODO: Explain how other users and developers can contribute to make your code better. 
+## Eksempel på påtrykning af en property
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+                using (_telemetryLogger.PushProperty("BuildingId", "17"))
+                {
+                    _telemetryLogger.LogWarning("Component type unknown");
+                }
+
+Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle indeholde property'en "BuildingId"/"17".
+
+## Eksempel på påtrykning af et lokalt correlation id
+
+                using (_telemetryLogger.GetCorrelationIdObject())
+                {
+                    _telemetryLogger.LogInformation("Testing correlationId as GetCorrelationIdObject");
+                    new LogWrapperTesting().SomeTestMethod01();
+                }
+
+Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle indeholde property'en "BuildingId"/"17".

@@ -27,14 +27,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 ## appsettings.json
 
-Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
-* `"Using"`: Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
-* `"Enrich"`: Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
-	* `"FromLogContext"`: Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
-	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"`: Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
-	* `"With..."`: De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
-* `"Destructure"`: Angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
-
+Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.eks. appsettings.json.
 
 	  "Serilog": {
 		"Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
@@ -85,11 +78,20 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
 	  },
 
 
+* `"Using"`: Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
+* `"Enrich"`: Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
+	* `"FromLogContext"`: Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
+	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"`: Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
+	* `"With..."`: De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
+* `"Destructure"`: Angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
+
 ## Startup.cs
 
-### `ConfigureServices`
+Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API.
 
-Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API. Linjerne skal indsættes i `ConfigureServices` metoden.
+### Tilføjelser til `ConfigureServices`
+
+Disse linjer indsættes i `ConfigureServices` metoden.
 
         public void ConfigureServices(IServiceCollection services)
         {

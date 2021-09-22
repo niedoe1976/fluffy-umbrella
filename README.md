@@ -28,7 +28,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 ## appsettings.json
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres.
-* `Using`
+* `"Using"`
 * 'Using'
 
 

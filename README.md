@@ -25,60 +25,83 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 ## NuGet pakke? .Net Standard 2.0
 
+## Test/QA/Produktion?
+
+### Application Insights opsætning og instrumentation key
+
 ## appsettings.json
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.eks. appsettings.json.
 
-	  "Serilog": {
-		"Using": [ "Serilog.Sinks.ApplicationInsights", "Serilog.Sinks.File" ],
-		"MinimumLevel": "Debug",
-		"WriteTo": [
-		  {
-			"Name": "ApplicationInsights",
-			"Args": {
-			  "InstrumentationKey": "e92c41b8-5d20-439a-9c62-e8835bff2096",
-			  "telemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
+	{
+		"NTI.FM.WriteToApplicationInsights": {
+		  "Active": "True",
+		  "restrictedToMinimumLevel": "Information"
+		},
+		"Serilog": {
+		  "MinimumLevel": "Debug",
+		  "WriteTo": [
+			{
+			  "Name": "File",
+			  "Args": {
+				"path": "Logs/log.txt",
+				"outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
+			  }
 			}
-		  },
-		  {
-			"Name": "File",
-			"Args": {
-			  "path": "Logs/log.txt",
-			  "restrictedToMinimumLevel": "Information",
-			  "outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
+		  ],
+		  "Filter": [
+			{
+			  "Name": "ByExcluding",
+			  "Args": {
+				"expression": "@l = 'Information' and Contains(@mt, 'filtered')"
+			  }
 			}
-		  }
-		],
-		"Filter": [
-		  {
-			"Name": "ByExcluding",
-			"Args": {
-			  "expression": "@l = 'Information' and Contains(@mt, 'filtered')"
+		  ],
+		  "Enrich": [ "FromLogContext", "WithMachineName", "WithEnvironmentName", "WithEnvironmentUserName", "WithAssemblyName", "WithAssemblyVersion", "WithThreadId", "WithCorrelationId", "WithCorrelationIdHeader" ],
+		  "Destructure": [
+			{
+			  "Name": "ToMaximumDepth",
+			  "Args": { "maximumDestructuringDepth": 4 }
+			},
+			{
+			  "Name": "ToMaximumStringLength",
+			  "Args": { "maximumStringLength": 100 }
+			},
+			{
+			  "Name": "ToMaximumCollectionCount",
+			  "Args": { "maximumCollectionCount": 10 }
 			}
+		  ],
+		  "Properties": {
+			"Application": "WebAPIForLogWrapperTest"
 		  }
-		],
-		"Enrich": [ "FromLogContext", "WithMachineName", "WithEnvironmentName", "WithEnvironmentUserName", "WithAssemblyName", "WithAssemblyVersion", "WithThreadId", "WithCorrelationId", "WithCorrelationIdHeader" ],
-		"Destructure": [
-		  {
-			"Name": "ToMaximumDepth",
-			"Args": { "maximumDestructuringDepth": 4 }
-		  },
-		  {
-			"Name": "ToMaximumStringLength",
-			"Args": { "maximumStringLength": 100 }
-		  },
-		  {
-			"Name": "ToMaximumCollectionCount",
-			"Args": { "maximumCollectionCount": 10 }
-		  }
-		],
-		"Properties": {
-		  "Application": "WebAPIForLogWrapperTest"
+		},
+		
+		...
+		
+		"ApplicationInsights": {
+		  "InstrumentationKey": "e92c41b8-5d20-439a-9c62-e8835bff2096",
+		  "telemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
 		}
-	  },
+	}
 
+### Application Insights opsætning
 
-* `"Using"`: Angiver hvilke sinks der skal logges til - i dette tilfælde logges der både til Application Insights og til fil.
+Den generelle opsætning placeres i `"ApplicationInsights"` sektionen. Sammen med `services.AddApplicationInsightsTelemetry(Configuration)` (se afsnittet om ConfigureServices nedenfor) giver det en `TelemetryConfiguration`, der anvendes via dependency injection. Det gør os i stand til at genbruge den samme instans. Se også https://github.com/serilog/serilog-sinks-applicationinsights#configuring.
+
+Opsætning af Application Insights til log wrapperen placeres i `"NTI.FM.WriteToApplicationInsights"` sektionen. Kun disse konfigurationer er tilgængelige:
+
+* `Active`: Slår logning til Application Insights til/fra.
+* `restrictedToMinimumLevel`: Angiver det minimale log level af logs der bliver sendt til Application Insights.
+
+### Opsætning af øvrige sinks
+
+Øvrige sinks kan konfigureres som normalt i `"Serilog"` sektionen, men kræver typisk at der inkluderes `Serilog.Sinks.[target]` NuGet pakker. Opsætningen ovenfor har et eksempel med logning til `"File"`.
+
+### Generel Serilog opsætning
+
+Placeres i "Serilog" sektionen. Herunder:
+
 * `"Enrich"`: Angiver hvilke af Serilogs enrichers der skal anvendes, f.eks.:
 	* `"FromLogContext"`: Bør altid inkluderes, da den er nødvendig for at kunne påtrykke correlation ids og lignende properties.
 	* `"WithCorrelationId"` og `"WithCorrelationIdHeader"`: Serilogs indbyggede understøttelse af correlation id. Correlation id bæres med på tværs af http request/response.
@@ -111,9 +134,10 @@ Disse linjer indsættes i `ConfigureServices` metoden.
 
 Den konkrete instans af log wrapperen kan genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
 
-        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger)
+        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, TelemetryConfiguration telemetryConfiguration)
         {
             _telemetryLogger = telemetryLogger;
+            _telemetryConfiguration = telemetryConfiguration;
         }
 
 # Logning i praksis

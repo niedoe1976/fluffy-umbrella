@@ -23,6 +23,8 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet `Microsoft.Extensions.Logging.ILoggerFactory`. Den genererer instanser af den ikke-generiske `FMSerilogTelemetry<T>`, der pakkes ind i proxy'en `ProxyFromIFMTelemetryToILogger` og dermed implementerer `Microsoft.Extensions.Logging.ILogger`.
 
+_Bemærk:_ Så snart en instans af `ILoggerFactory` gjort tilgængelig for dependency injection aktiveres der en masse
+
 Instancerne af disse interfaces og klasser genereres via dependency injection - se nedenfor.
 
 # Opsætning
@@ -125,7 +127,7 @@ Placeres i "Serilog" sektionen. Herunder:
 
 ## Web API controllers
 
-Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API med en controller `WeatherForecastController`.
+Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API projekt med en controller `WeatherForecastController`.
 
 ### Tilføjelser til `ConfigureServices` i Startup.cs
 
@@ -134,7 +136,7 @@ Disse linjer indsættes i `ConfigureServices` metoden for at gøre de nødvendig
         public void ConfigureServices(IServiceCollection services)
         {
 		
-			...
+            ...
 		
             // TelemetryConfiguration is dependency injected here
             services.AddApplicationInsightsTelemetry(Configuration);

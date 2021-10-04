@@ -151,7 +151,9 @@ Disse linjer indsættes i `ConfigureServices` metoden for at gøre de nødvendig
 
 ### Dependency injection af instanserne 
 
-De konkrete instanser af den generisk log klasse `FMSerilogTelemetry<T>` (hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`) og af log instans factory'en `FMSerilogTelemetryFactory` kan nu genereres via dependency injection.
+De konkrete instanser af den generisk log klasse `FMSerilogTelemetry<T>` (hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`) og af log instans factory'en `FMSerilogTelemetryFactory` kan nu trækkes ud via dependency injection.
+
+Det kunne se sådan ud:
 
         public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, TelemetryConfiguration telemetryConfiguration, ILoggerFactory loggerFactory)
         {
@@ -160,15 +162,17 @@ De konkrete instanser af den generisk log klasse `FMSerilogTelemetry<T>` (hvor d
             _loggerFactory = loggerFactory;
         }
 
-*
-*
-*
+Motivation for hver af de udtrukkede instanser:
+
+* `_telemetryLogger`: Vores log wrapper, der benyttes til logning - se eksempler på brugen nedenfor.
+* `_telemetryConfiguration`: Kun medtaget her som eksempel, fordi telemetry konfigurationen benyttes til at lave instanser af `FMSerilogTelemetry<T>` til tests. Kan eventuelt udelades.
+* `_loggerFactory`: Bruges til logning fra Entity Framework Core - se nedenfor.
 
 ## Brug af `FMSerilogTelemetryFactory` som `ILoggerFactory` til logning fra Entity Framework Core
 
 Først skal dependency injection være på plads som ovenfor, så vi har adgang til `ILoggerFactory` instansen.
 
-Nu kan logning fra Entity Framework Core sættes op fra 
+Nu kan logning fra Entity Framework Core sættes op fra DbContext subklassen (her `SamuraiContext`) i `OnConfiguring` med et kald til `UseLoggerFactory`:
 
 		public class SamuraiContext : DbContext
 		{
@@ -187,23 +191,12 @@ Nu kan logning fra Entity Framework Core sættes op fra
 			{
 				optionsBuilder
 					.UseSqlServer("Data Source= (localdb)\\MSSQLLocalDB; Initial Catalog=SamuraiAppData")
-					_.UseLoggerFactory(_loggerFactory)_
+					.UseLoggerFactory(_loggerFactory)
 					.EnableSensitiveDataLogging()
 					;
 			}
 
-			protected override void OnModelCreating(ModelBuilder modelBuilder)
-			{
-				modelBuilder.Entity<Samurai>()
-					.HasMany(s => s.Battles)
-					.WithMany(b => b.Samurais)
-					.UsingEntity<BattleSamurai>
-					(bs => bs.HasOne<Battle>().WithMany(),
-						bs => bs.HasOne<Samurai>().WithMany())
-					.Property(bs => bs.DateJoined)
-					.HasDefaultValueSql("getdate()")
-					; 
-			}
+			...
 		}
 
 
@@ -214,10 +207,6 @@ Her skal vi igen så vidt muligt benytte dependency injectede `FMSerilogTelemetr
 Hvis det (mod forventning) bliver nødvendigt at tilgå en enkelt ILogger instans i stedet for at bruge factory'en, så kan den tilføjes til dependency injection poolen i ConfigureServices:
 
 		services.AddSingleton<ILogger, ProxyFromIFMTelemetryToILogger>();
-
-Desuden
-
-		services.AddSingleton<IFMTelemetry, FMSerilogTelemetry>();
 
 # Logning i praksis i C# koden
 

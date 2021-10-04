@@ -21,17 +21,17 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 `FMSerilogTelemetry<T>` er en implementation af interfacet, der benytter Serilog biblioteket - <https://serilog.net/>. Serilog understøtter struktureret logning, hvilket for eksempel gør søgning og filtrering nemmere på Application Insights. Den kan sættes op til at logge til et eller flere "Sinks" - se afsnittet om opsætning i appsettings.json nedenfor.
 
-Instancer af `FMSerilogTelemetry<T>` genereres via dependency injection - se nedenfor.
+Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet `Microsoft.Extensions.Logging.ILoggerFactory`. Den genererer instanser af den ikke-generiske `FMSerilogTelemetry<T>`, der pakkes ind i proxy'en `ProxyFromIFMTelemetryToILogger` og dermed implementerer `Microsoft.Extensions.Logging.ILogger`.
 
-Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet Microsoft.Extensions.Logging.ILoggerFactory. Den genererer instanser af den ikke  Denne factory tilgåes også via dependency injection
+Instancerne af disse interfaces og klasser genereres via dependency injection - se nedenfor.
 
 # Opsætning
 
-## NuGet pakke? .Net Standard 2.0
+Disse dele af opsætningen er stadig ikke på plads:
 
-## Test/QA/Produktion?
-
-### Application Insights opsætning og instrumentation key
+* NuGet pakke? .Net Standard 2.0
+* Test/QA/Produktion?
+* Application Insights opsætning og instrumentation key?
 
 # Konfiguration
 

@@ -21,6 +21,10 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 `FMSerilogTelemetry<T>` er en implementation af interfacet, der benytter Serilog biblioteket - <https://serilog.net/>. Serilog understøtter struktureret logning, hvilket for eksempel gør søgning og filtrering nemmere på Application Insights. Den kan sættes op til at logge til et eller flere "Sinks" - se afsnittet om opsætning i appsettings.json nedenfor.
 
+Instancer af `FMSerilogTelemetry<T>` genereres via dependency injection - se nedenfor.
+
+Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet Microsoft.Extensions.Logging.ILoggerFactory. Den genererer instanser af den ikke  Denne factory tilgåes også via dependency injection
+
 # Opsætning
 
 ## NuGet pakke? .Net Standard 2.0
@@ -29,6 +33,8 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 ### Application Insights opsætning og instrumentation key
 
+# Konfiguration
+
 ## appsettings.json
 
 Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.eks. appsettings.json.
@@ -36,7 +42,7 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.ek
 	{
 		"NTI.FM.WriteToApplicationInsights": {
 		  "Active": "True",
-		  "restrictedToMinimumLevel": "Information"
+		  "restrictedToMinimumLevel": "Debug"
 		},
 		"Serilog": {
 		  "MinimumLevel": "Debug",
@@ -44,7 +50,12 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.ek
 			{
 			  "Name": "File",
 			  "Args": {
-				"path": "Logs/log.txt",
+				"path": "Logs/log_.txt",
+				"rollingInterval": "Day",
+				"fileSizeLimitBytes": "1000000000",
+				"rollOnFileSizeLimit": true,
+				"retainedFileCountLimit": "31",
+				"shared": "True",
 				"outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
 			  }
 			}
@@ -85,20 +96,22 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.ek
 		}
 	}
 
-### Application Insights opsætning
+### Application Insights konfiguration
 
-Den generelle opsætning placeres i `"ApplicationInsights"` sektionen. Sammen med `services.AddApplicationInsightsTelemetry(Configuration)` (se afsnittet om ConfigureServices nedenfor) giver det en `TelemetryConfiguration`, der anvendes via dependency injection. Det gør os i stand til at genbruge den samme instans. Se også https://github.com/serilog/serilog-sinks-applicationinsights#configuring.
+Den generelle konfiguration placeres i `"ApplicationInsights"` sektionen. Sammen med `services.AddApplicationInsightsTelemetry(Configuration)` (se afsnittet om ConfigureServices nedenfor) giver det en `TelemetryConfiguration`, der anvendes via dependency injection. Det gør os i stand til at genbruge den samme instans, hvilket klart anbefales - se også https://github.com/serilog/serilog-sinks-applicationinsights#configuring.
 
-Opsætning af Application Insights til log wrapperen placeres i `"NTI.FM.WriteToApplicationInsights"` sektionen. Kun disse konfigurationer er tilgængelige:
+Konfiguration af Application Insights til log wrapperen placeres i `"NTI.FM.WriteToApplicationInsights"` sektionen. Kun disse konfigurationer er tilgængelige:
 
 * `Active`: Slår logning til Application Insights til/fra.
 * `restrictedToMinimumLevel`: Angiver det minimale log level af logs der bliver sendt til Application Insights.
 
-### Opsætning af øvrige sinks
+### Konfiguration af øvrige sinks
 
-Øvrige sinks kan konfigureres som normalt i `"Serilog"` sektionen, men kræver typisk at der inkluderes `Serilog.Sinks.[target]` NuGet pakker. Opsætningen ovenfor har et eksempel med logning til `"File"`.
+Øvrige sinks kan konfigureres som normalt i `"Serilog"` sektionen, men kræver typisk at der inkluderes `Serilog.Sinks.[target]` NuGet pakker.
 
-### Generel Serilog opsætning
+Konfigurationen ovenfor har et eksempel med logning til `"File"`. Læs mere om konfigurationen af Serilogs fil logning her: <https://github.com/serilog/serilog-sinks-file>.
+
+### Generel Serilog konfiguration
 
 Placeres i "Serilog" sektionen. Herunder:
 
@@ -108,39 +121,66 @@ Placeres i "Serilog" sektionen. Herunder:
 	* `"With..."`: De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
 * `"Destructure"`: Angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
 
-## Startup.cs
+# Opsætning af logning i C# koden
+
+## Web API controllers
 
 Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API.
 
-### Tilføjelser til `ConfigureServices`
+### Tilføjelser til `ConfigureServices` i Startup.cs
 
-Disse linjer indsættes i `ConfigureServices` metoden.
+Disse linjer indsættes i `ConfigureServices` metoden for at gøre de nødvendige instancer af log klasserne tilgængelige via dependency injection.
 
         public void ConfigureServices(IServiceCollection services)
         {
 		
 			...
 		
-			services.AddApplicationInsightsTelemetry(Configuration);
+            // TelemetryConfiguration is dependency injected here
+            services.AddApplicationInsightsTelemetry(Configuration);
 
-			services.AddSingleton(typeof(IFMTelemetry<>), typeof(FMSerilogTelemetry<>));
+            // Dependency injection of a generic IFMTelemetry instance
+            services.AddSingleton(typeof(IFMTelemetry<>), typeof(FMSerilogTelemetry<>));
 
-			// To make logging able to read/write correlation ids from/to the http request/response headers
-			services.AddHttpContextAccessor();
+            // Dependency injection of an ILoggerFactory instance
+            services.AddSingleton<ILoggerFactory, FMSerilogTelemetryFactory>();
+            
+            // To make logging able to read/write correlation ids from/to the http request/response headers
+            services.AddHttpContextAccessor();
         }
 
+## Dependency injection af instanser af den generisk log klasse `FMSerilogTelemetry<T>`
 
-## Dependency injection
+Den konkrete instans af den generiske log wrapper kan nu genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
 
-Den konkrete instans af log wrapperen kan genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
-
-        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, TelemetryConfiguration telemetryConfiguration)
+        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, TelemetryConfiguration telemetryConfiguration, ILoggerFactory loggerFactory)
         {
             _telemetryLogger = telemetryLogger;
             _telemetryConfiguration = telemetryConfiguration;
+            _loggerFactory = loggerFactory;
         }
 
-# Logning i praksis
+## Dependency injection af log instans factory'en `FMSerilogTelemetryFactory`
+
+Entity 
+
+## Øvrige afhængigheder af `Microsoft.Exception.Logging.ILogger`
+
+Her skal vi også benytte to implementationer af `Microsoft.Exception.Logging` interfaces:
+
+* 
+
+Og de skal så vidt muligt tilgåes via dependency injection som ovenfor.
+
+
+
+	services.AddSingleton<ILogger, ProxyFromIFMTelemetryToILogger>();
+
+Desuden
+
+    services.AddSingleton<IFMTelemetry, FMSerilogTelemetry>();
+
+# Logning i praksis i C# koden
 
 I de følgende log eksempler er `_telemetryLogger` en instans af `IFMTelemetry<T>` (se ovenfor om Startup.cs og Dependency injection).
 

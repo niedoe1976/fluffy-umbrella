@@ -23,7 +23,7 @@ Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til l
 
 Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet `Microsoft.Extensions.Logging.ILoggerFactory`. Den genererer instanser af den ikke-generiske `FMSerilogTelemetry<T>`, der pakkes ind i proxy'en `ProxyFromIFMTelemetryToILogger` og dermed implementerer `Microsoft.Extensions.Logging.ILogger`.
 
-_Bemærk:_ Så snart en instans af `ILoggerFactory` gjort tilgængelig for dependency injection aktiveres der en masse
+_Bemærk:_ Så snart en instans af `ILoggerFactory` er gjort tilgængelig for dependency injection, aktiveres der en masse "gratis" logning fra f.eks. Microsoft.AspNetCore.Mvc.[...].
 
 Instancerne af disse interfaces og klasser genereres via dependency injection - se nedenfor.
 

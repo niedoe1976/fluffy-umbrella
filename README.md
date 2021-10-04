@@ -174,11 +174,11 @@ Og de skal så vidt muligt tilgåes via dependency injection som ovenfor.
 
 
 
-	services.AddSingleton<ILogger, ProxyFromIFMTelemetryToILogger>();
+		services.AddSingleton<ILogger, ProxyFromIFMTelemetryToILogger>();
 
 Desuden
 
-    services.AddSingleton<IFMTelemetry, FMSerilogTelemetry>();
+		services.AddSingleton<IFMTelemetry, FMSerilogTelemetry>();
 
 # Logning i praksis i C# koden
 

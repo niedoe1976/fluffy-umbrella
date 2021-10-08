@@ -13,36 +13,40 @@ In this course, you will ean how to use GitHub successfully.
 
 
 
-# All of the below is test!
-
 # Introduktion
 
-Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til logning, event tracking og lignende i NTI FM 2.0.
+Log Wrapper projektet udstiller interfacet `IFMTelemetry<T>`, der benyttes til logning i NTI FM 2.0.
 
 `FMSerilogTelemetry<T>` er en implementation af interfacet, der benytter Serilog biblioteket - <https://serilog.net/>. Serilog understøtter struktureret logning, hvilket for eksempel gør søgning og filtrering nemmere på Application Insights. Den kan sættes op til at logge til et eller flere "Sinks" - se afsnittet om opsætning i appsettings.json nedenfor.
 
-## Øvrig telemetri
+Desuden er der implementeret en factory klasse `FMSerilogTelemetryFactory` der implementerer interfacet `Microsoft.Extensions.Logging.ILoggerFactory`. Den genererer instanser af den ikke-generiske `FMSerilogTelemetry`, der pakkes ind i proxy'en `ProxyFromIFMTelemetryToILogger` og dermed implementerer `Microsoft.Extensions.Logging.ILogger`.
 
-Hvis log wrapperen er sat op til at logge til Application Insights, så vil øvrig telemetri (f.eks. event tracking) blive registreret via application insights API'et: <https://docs.microsoft.com/en-us/azure/azure-monitor/app/api-custom-events-metrics>
+_Bemærk:_ Så snart en instans af `ILoggerFactory` er gjort tilgængelig for dependency injection, aktiveres der en masse "gratis" logning fra f.eks. Microsoft.AspNetCore.Mvc.[...].
 
-Er log wrapperen derimod ikke sat op til at logge til Application Insights, så vil øvrig telemetri blive logget som almindelige logs med log level `Information` - se f.eks. `FMSerilogTelemetry.TrackEvent`.
+Instancerne af de nævnte interfaces og klasser genereres via dependency injection - se nedenfor.
 
 # Opsætning
 
-## NuGet pakke? .Net Standard 2.0
+Disse dele af opsætningen er stadig ikke på plads:
 
-## Test/QA/Produktion?
+* NuGet pakke? .Net Standard 2.0
+* Test/QA/Produktion?
+* Opsætning af instrumentation key til Application Insights?
 
-### Application Insights opsætning og instrumentation key
+# Konfiguration
 
 ## appsettings.json
 
-Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.eks. appsettings.json.
+Herunder et eksempel på hvordan log wrapperen kunne konfigureres i f.eks. appsettings.json.
 
 	{
 		"NTI.FM.WriteToApplicationInsights": {
 		  "Active": "True",
-		  "restrictedToMinimumLevel": "Information"
+		  "RestrictedToMinimumLevel": "Debug"
+		},
+		"NTI.FM.LogPropertyNaming": {
+		  "CodeContextPropertyName": "CodeContext",
+		  "LocalCorrelationIdPropertyName": "LocalCorrelationId"
 		},
 		"Serilog": {
 		  "MinimumLevel": "Debug",
@@ -50,8 +54,13 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.ek
 			{
 			  "Name": "File",
 			  "Args": {
-				"path": "Logs/log.txt",
-				"outputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
+				"Path": "Logs/log_.txt",
+				"RollingInterval": "Day",
+				"FileSizeLimitBytes": "1000000000",
+				"RollOnFileSizeLimit": true,
+				"RetainedFileCountLimit": "31",
+				"Shared": "True",
+				"OutputTemplate": "[{Timestamp:o} {Level:u3}] {Message:lj} [ASM:{AssemblyName},VER:{AssemblyVersion}] [USER:{EnvironmentUserName}] [{ClimateChanges.Year}] [PROP:{Properties}] {NewLine}{Exception}"
 			  }
 			}
 		  ],
@@ -87,24 +96,26 @@ Herunder et eksempel på hvordan `FMSerilogTelemetry<T>` kan konfigureres i f.ek
 		
 		"ApplicationInsights": {
 		  "InstrumentationKey": "e92c41b8-5d20-439a-9c62-e8835bff2096",
-		  "telemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
+		  "TelemetryConverter": "Serilog.Sinks.ApplicationInsights.Sinks.ApplicationInsights.TelemetryConverters.TraceTelemetryConverter, Serilog.Sinks.ApplicationInsights"
 		}
 	}
 
-### Application Insights opsætning
+### Application Insights konfiguration
 
-Den generelle opsætning placeres i `"ApplicationInsights"` sektionen. Sammen med `services.AddApplicationInsightsTelemetry(Configuration)` (se afsnittet om ConfigureServices nedenfor) giver det en `TelemetryConfiguration`, der anvendes via dependency injection. Det gør os i stand til at genbruge den samme instans, hvilket klart anbefales - se også https://github.com/serilog/serilog-sinks-applicationinsights#configuring.
+Den generelle konfiguration placeres i `"ApplicationInsights"` sektionen. Sammen med `services.AddApplicationInsightsTelemetry(Configuration)` (se afsnittet om ConfigureServices nedenfor) giver det en `TelemetryConfiguration`, der anvendes via dependency injection. Det gør os i stand til at genbruge den samme instans, hvilket klart anbefales - se også https://github.com/serilog/serilog-sinks-applicationinsights#configuring.
 
-Opsætning af Application Insights til log wrapperen placeres i `"NTI.FM.WriteToApplicationInsights"` sektionen. Kun disse konfigurationer er tilgængelige:
+Konfiguration af Application Insights til log wrapperen placeres i `"NTI.FM.WriteToApplicationInsights"` sektionen. Kun disse konfigurationer er tilgængelige:
 
 * `Active`: Slår logning til Application Insights til/fra.
 * `restrictedToMinimumLevel`: Angiver det minimale log level af logs der bliver sendt til Application Insights.
 
-### Opsætning af øvrige sinks
+### Konfiguration af øvrige sinks
 
-Øvrige sinks kan konfigureres som normalt i `"Serilog"` sektionen, men kræver typisk at der inkluderes `Serilog.Sinks.[target]` NuGet pakker. Opsætningen ovenfor har et eksempel med logning til `"File"`.
+Øvrige sinks kan konfigureres som normalt i `"Serilog"` sektionen, men kræver typisk at der inkluderes `Serilog.Sinks.[target]` NuGet pakker.
 
-### Generel Serilog opsætning
+Konfigurationen ovenfor har et eksempel med logning til `"File"`. Læs mere om konfigurationen af Serilogs fil logning her: <https://github.com/serilog/serilog-sinks-file>.
+
+### Generel Serilog konfiguration
 
 Placeres i "Serilog" sektionen. Herunder:
 
@@ -114,39 +125,115 @@ Placeres i "Serilog" sektionen. Herunder:
 	* `"With..."`: De resterende enrichers påtrykker typisk enkelte properties der kan være nyttige til udrede hvilket miljø der er kørt under.
 * `"Destructure"`: Angiver hvordan objekter i de strukturerede logs skal destruktureres til tekst når de er indlejret i log beskeder.
 
-## Startup.cs
+### Øvrig log konfiguration
 
-Det følgende er et eksempel på opsætning af en `FMSerilogTelemetry<T>` log wrapper i et Web API.
+Da vi dependency injecter en ILoggerFactory, får vi (som nævnt indledningsvist) noget logning forærende. Log levels for dette kan konfigureres i `"Logging"` sektionen, som her:
 
-### Tilføjelser til `ConfigureServices`
+		"Logging": {
+		  "ApplicationInsights": {
+			"LogLevel": {
+			  "Default": "Debug",
+			  "Microsoft": "Error"
+			}
+		  },
+		  "LogLevel": {
+			"Default": "Information",
+			"Microsoft": "Warning",
+			"Microsoft.Hosting.Lifetime": "Information"
+		  }
+		},
 
-Disse linjer indsættes i `ConfigureServices` metoden.
+Se også <https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0>.
+
+### Property Naming konfiguration
+
+I `"NTI.FM.LogPropertyNaming"` sektionen kan man ændre property navnet på de log properties, som udskrives direkte af log wrapperen. Det vil dog typisk ikke være nødvendigt - det er ikke navnet, men derimod værdien, af disse properties der er vigtig.
+
+* `"CodeContextPropertyName"`: Navnet på den property der angiver hvilken kontekst en given `FMTelemetry` instans logger fra - f.eks. klassenavnet fra de generisk ´<T>´ instanser, eller det `categoryName` der gives i kald til `ILoggerFactory.CreateLogger`.
+	* Default værdi (hvis intet er konfigureret): "CodeContext"
+* `"LocalCorrelationIdPropertyName"`: Navnet på den property der bruges til at angive lokale correlation ids (se kaldet til `_telemetryLogger.GetCorrelationIdObject` nedenfor)
+	* Default værdi (hvis intet er konfigureret): "LocalCorrelationId"
+
+# Opsætning af logning i C# koden
+
+## Web API controllers
+
+Det følgende er et eksempel på opsætning af logning i et Web API projekt med en controller `WeatherForecastController`. Der opsættes følgende instanser:
+
+* En `FMSerilogTelemetry<T>` log wrapper
+* En `FMSerilogTelemetryFactory` (som `ILoggerFactory`), der genererer ILogger instanser ved hjælp af en proxy.
+
+### Tilføjelser til `ConfigureServices` i Startup.cs
+
+Denne linje indsættes i `ConfigureServices` metoden for at gøre de nødvendige instanser af log klasserne tilgængelige via dependency injection.
 
         public void ConfigureServices(IServiceCollection services)
         {
 		
-			...
+            ...
 		
-			services.AddApplicationInsightsTelemetry(Configuration);
-
-			services.AddSingleton(typeof(IFMTelemetry<>), typeof(FMSerilogTelemetry<>));
-
-			// To make logging able to read/write correlation ids from/to the http request/response headers
-			services.AddHttpContextAccessor();
+            services.AddFMTelemetry(Configuration);
         }
 
+### Brug af instanserne via dependency injection 
 
-## Dependency injection
+De konkrete instanser af den generisk log klasse `FMSerilogTelemetry<T>` (hvor det også angives hvilken (generisk) type `T` der anvendes - i dette tilfælde `WeatherForecastController`) og af log instans factory'en `FMSerilogTelemetryFactory` kan nu trækkes ud via dependency injection.
 
-Den konkrete instans af log wrapperen kan genereres via dependency injection, hvor det også angives hvilken (generisk) type der anvendes - i dette tilfælde `WeatherForecastController`.
+Det kunne se sådan ud:
 
-        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, TelemetryConfiguration telemetryConfiguration)
+        public WeatherForecastController(IFMTelemetry<WeatherForecastController> telemetryLogger, ILoggerFactory loggerFactory)
         {
             _telemetryLogger = telemetryLogger;
-            _telemetryConfiguration = telemetryConfiguration;
+            _loggerFactory = loggerFactory;
         }
 
-# Logning i praksis
+Motivation for hver af de udtrukkede instanser:
+
+* `_telemetryLogger`: Vores log wrapper, der benyttes til logning - se eksempler på brugen nedenfor.
+* `_loggerFactory`: Bruges til logning fra Entity Framework Core - se nedenfor.
+
+## Brug af `FMSerilogTelemetryFactory` som `ILoggerFactory` til logning fra Entity Framework Core
+
+Først skal dependency injection være på plads som ovenfor, så vi har adgang til `ILoggerFactory` instansen.
+
+Nu kan logning fra Entity Framework Core sættes op fra DbContext subklassen (her `SamuraiContext`) i `OnConfiguring` med et kald til `UseLoggerFactory`:
+
+		public class SamuraiContext : DbContext
+		{
+			private readonly ILoggerFactory _loggerFactory;
+
+			public DbSet<Samurai> Samurais { get; set; }
+			public DbSet<Quote> Quotes { get; set; }
+			public DbSet<Battle> Battles { get; set; }
+
+			public SamuraiContext(ILoggerFactory loggerFactory)
+			{
+				_loggerFactory = loggerFactory;
+			}
+
+			protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+			{
+				optionsBuilder
+					.UseSqlServer("Data Source= (localdb)\\MSSQLLocalDB; Initial Catalog=SamuraiAppData")
+					.UseLoggerFactory(_loggerFactory)
+					.EnableSensitiveDataLogging()
+					;
+			}
+
+			...
+		}
+
+Når dette er gjort vil der automatisk blive logget f.eks. SQL queries og query execution tider.
+
+## Øvrige afhængigheder af `Microsoft.Exception.Logging.ILogger`
+
+Her skal vi igen så vidt muligt benytte dependency injectede `FMSerilogTelemetryFactory` instans af `ILoggerFactory` interfacet som ovenfor.
+
+Hvis det (mod forventning) bliver nødvendigt at tilgå en enkelt ILogger instans i stedet for at bruge factory'en, så kan den tilføjes til dependency injection poolen i `FMTelemetryWebHostBuilderExtensions.AddFMTelemetry`:
+
+		services.AddSingleton<ILogger, ProxyFromIFMTelemetryToILogger>();
+
+# Logning i praksis i C# koden
 
 I de følgende log eksempler er `_telemetryLogger` en instans af `IFMTelemetry<T>` (se ovenfor om Startup.cs og Dependency injection).
 
@@ -218,16 +305,3 @@ Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle indeholde prope
 		}
 
 Logs indenfor `using` blokken (inklusiv kaldte metoder) vil alle blive påtrykt et lokalt correlation id, der *ikke* overskriver correlation id fra Serilog enricheren - de ligger i forskellige properties.
-
-## Eksempel på tracking af et event
-
-		_telemetryLogger.TrackEvent("Test TrackEvent basic");
-		_telemetryLogger.TrackEvent("Test TrackEvent properties", 
-			new Dictionary<string, string>(){ {"PropName1", "PropValue1"}, { "PropName2", "PropValue2" } }, 
-			null);
-		_telemetryLogger.TrackEvent("Test TrackEvent metrics", 
-			null,
-			new Dictionary<string, double>(){ {"MetricName1", 1.0 }, { "MetricName2", 7.0 } });
-		_telemetryLogger.TrackEvent("Test TrackEvent both properties and metrics",
-			new Dictionary<string, string>() { { "PropName1", "PropValue1" }, { "PropName2", "PropValue2" } },
-			new Dictionary<string, double>(){ {"MetricName1", 3.0 }, { "MetricName2", 11.0 } });
